@@ -13,4 +13,6 @@ public:
 private:
     std::string buffer;
     std::mutex mtx;
+    std::condition_variable cv;
+    bool flag = false;
 };

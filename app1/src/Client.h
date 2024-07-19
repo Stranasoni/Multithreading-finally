@@ -14,5 +14,6 @@ private:
     void CountingSort(std::string& input);
 
     Buffer buffer;
+    std::mutex mtx;
 
 };
