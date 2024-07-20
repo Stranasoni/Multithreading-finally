@@ -1,9 +1,11 @@
 #include "Client.h"
-#include "iostream"
 #include <thread>
 
+
 Client::Client()
-{}
+{
+    ConnectToServer();
+}
 
 bool Client::InputIsDigit(const std::string& input)
 {
@@ -83,19 +85,71 @@ void Client::ReadThread()
         std::string data = buffer.read();
         std::cout << "Полученные данные: " << data <<std::endl;
 
-        int sum;
+        int sum = 0;
         for (char ch :data)
         {
             if (ch !='K' && ch != 'B') sum+=(int)ch -'0';
         }
-        SendDataToProgram2(sum);//нужно сделать оповещение отправлены ли данные программе 2
+        SendDataToProgram2(std::to_string(sum));//нужно сделать оповещение отправлены ли данные программе 2
     }
 }
 
-void Client::SendDataToProgram2(int sum)
+bool Client::ConnectToServer()
 {
+    // вынести имя абстрактного сокета в define
+    client_dsock = socket(AF_UNIX, SOCK_STREAM, 0);
+    if(client_dsock == -1){
+        std::cout <<"Соединение с сервером не установлено:"<<std::endl;
+        perror("socket");
+        close(client_dsock);
+        return false;
+    }
+    memset(&sock_addr,0,sizeof(sock_addr));
+    sock_addr.sun_family = AF_UNIX;
+    strncpy(sock_addr.sun_path, "/tmp/server", sizeof(sock_addr.sun_path) -1);
+
+    if(connect(client_dsock,(const sockaddr*)&sock_addr,sizeof(sock_addr)) == -1)
+    {
+        perror("connect");
+        close(client_dsock);
+        return false;
+    }
+    connected = true;
+    std::cout << "Подключение к серверу успешно.\n";
+    return true;
+}
+
+void Client::SendDataToProgram2(std::string sum)
+{
+    //решено открыть сокет соединение единожды на всю программу, переподключение в случае недоступности,
+    //но если попытка переподключения неудачна, поток два информирует об этом и продолжает работу, а не ждет.
+    if (!connected){
+        if(!ConnectToServer()){
+            std::cout << "Не удалось подключиться к серверу. Возможно приложение 2 не запущено.\n";
+            return;
+        }
+    }
+    // MSG_NOSIGNAL вернет -1 если сервер не доступен 
+  
+    int count_byte_send = send(client_dsock, sum.c_str(), sum.size(), MSG_NOSIGNAL);
+    if(count_byte_send == -1 && errno == EPIPE)
+    {
+        if (errno == EPIPE)  std::cout << "Соединение закрылось на другом конце.\n";
+        perror("send");
+        close(client_dsock);
+        connected = false;
+        return;
+    }
+    
+    std::cout <<"Данные успешно отправлены\n"; 
+    
 
 }
+
+    
+    
+
+
 
 
 
