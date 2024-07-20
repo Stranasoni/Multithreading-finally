@@ -8,7 +8,7 @@ void Buffer::write(const std::string& data)
     buffer = data; 
     flag = true;
     cv.notify_one();
-    //std::this_thread::sleep_for(std::chrono::microseconds(1000000));
+    
 
 }
 

@@ -5,6 +5,7 @@
 Client::Client()
 {
     ConnectToServer();
+    std::cout << "Введите строку из цифр (максимум 64 символа):"<< std::endl;
 }
 
 bool Client::InputIsDigit(const std::string& input)
@@ -50,7 +51,6 @@ void Client::WriteThread()
     while(true)
     {
         std::string input;
-        std::cout << "Введите строку из цифр (максимум 64 символа):"<< std::endl;
         std::getline(std::cin, input);
         //или можно было бы использовать std::all_of(input.begin(), input.end(), ::isdigit) из <algorithm>
         if (input.size() > 64 || !InputIsDigit(input)) 
@@ -72,9 +72,6 @@ void Client::WriteThread()
             } 
         }
         buffer.write(input);
-        //для последовательного вывода в консоль
-        std::this_thread::sleep_for(std::chrono::microseconds(1));
-    
     }
 }
 
@@ -91,12 +88,12 @@ void Client::ReadThread()
             if (ch !='K' && ch != 'B') sum+=(int)ch -'0';
         }
         SendDataToProgram2(std::to_string(sum));//нужно сделать оповещение отправлены ли данные программе 2
+        std::cout << "Введите строку из цифр (максимум 64 символа):"<< std::endl;
     }
 }
 
 bool Client::ConnectToServer()
 {
-    // вынести имя абстрактного сокета в define
     client_dsock = socket(AF_UNIX, SOCK_STREAM, 0);
     if(client_dsock == -1){
         std::cout <<"Соединение с сервером не установлено:"<<std::endl;
@@ -104,12 +101,14 @@ bool Client::ConnectToServer()
         close(client_dsock);
         return false;
     }
-    memset(&sock_addr,0,sizeof(sock_addr));
+
+    memset(&sock_addr, 0, sizeof(sock_addr));
     sock_addr.sun_family = AF_UNIX;
-    strncpy(sock_addr.sun_path, "/tmp/server", sizeof(sock_addr.sun_path) -1);
+    strncpy(sock_addr.sun_path, SOCKET_NAME, sizeof(sock_addr.sun_path) -1);
 
     if(connect(client_dsock,(const sockaddr*)&sock_addr,sizeof(sock_addr)) == -1)
     {
+        std::cout << "Не удалось подключиться к серверу. Возможно сервер не запущен.\n";
         perror("connect");
         close(client_dsock);
         return false;
@@ -121,28 +120,25 @@ bool Client::ConnectToServer()
 
 void Client::SendDataToProgram2(std::string sum)
 {
-    //решено открыть сокет соединение единожды на всю программу, переподключение в случае недоступности,
-    //но если попытка переподключения неудачна, поток два информирует об этом и продолжает работу, а не ждет.
     if (!connected){
         if(!ConnectToServer()){
-            std::cout << "Не удалось подключиться к серверу. Возможно приложение 2 не запущено.\n";
+            std::cout << "Не удалось подключиться к серверу. Возможно сервер не запущен.\n";
             return;
         }
     }
-    // MSG_NOSIGNAL вернет -1 если сервер не доступен 
-  
+
+    // MSG_NOSIGNAL вернет -1 если сервер не доступен  
     int count_byte_send = send(client_dsock, sum.c_str(), sum.size(), MSG_NOSIGNAL);
     if(count_byte_send == -1 && errno == EPIPE)
     {
-        if (errno == EPIPE)  std::cout << "Соединение закрылось на другом конце.\n";
+        if (errno == EPIPE) std::cout << "Соединение закрылось на другом конце.\n";
         perror("send");
         close(client_dsock);
         connected = false;
         return;
     }
     
-    std::cout <<"Данные успешно отправлены\n"; 
-    
+    std::cout <<"Данные отправлены\n";   
 
 }
 

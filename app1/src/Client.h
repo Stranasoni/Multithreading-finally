@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <sys/un.h>
-
+#define SOCKET_NAME "/tmp/my_divine_server"
 
 class Client{
 public:
@@ -23,7 +23,7 @@ private:
 
     int client_dsock; 
     struct sockaddr_un sock_addr;
-    bool connected;
+    bool connected = false;
 
 
 

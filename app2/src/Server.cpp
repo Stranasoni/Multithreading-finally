@@ -1,57 +1,45 @@
-#include <sys/socket.h>
-//#include <sys/types.h>
-//#include <netinet/in.h>
-#include <unistd.h>
-#include <iostream>
-//#include <cstring>
-//#include <string>
-#include <sys/un.h>
+#include "Server.h"
 
-int main(int argc, char* argv[])
+bool Server::Create()
 {
-    int server_dsock = socket(AF_UNIX, SOCK_STREAM, 0);
-    std::cout << server_dsock<<std::endl;
-    int data_dsock;
-    int count_byte_get;
-    char buffer[3];//ограничение входной строки 64 максимальная сумма 9*64 = 576
+    server_dsock = socket(AF_UNIX, SOCK_STREAM, 0);
     if(server_dsock == -1)
     {
         std::cerr <<"Не удалось создать сокет:\n";
         perror("socket");
-        return 1;
+        return false;
     }
 
-    struct sockaddr_un name;
-    
-    memset(&name, 0, sizeof(sockaddr_un));
+    memset(&sock_addr, 0, sizeof(sockaddr_un));
  
-    
-    name.sun_family = AF_UNIX;
-    std::string socket_name = "/tmp/server";
-    //check socket_name <108 bait
-    strncpy(name.sun_path, socket_name.c_str(), sizeof(name.sun_path)-1);
-    
-    if (unlink(socket_name.c_str()) == -1 && errno != ENOENT) {
+    sock_addr.sun_family = AF_UNIX;
+
+    //обрезает socket_name < 108 байт здесь возможно придеться преобразовать к строке.с_str()
+    strncpy(sock_addr.sun_path, SOCKET_NAME, sizeof(sock_addr.sun_path) - 1);
+
+    if (unlink(SOCKET_NAME) == -1 && errno != ENOENT) {
         std::cerr << "Не удалось удалить файл сокета: errno = " << errno << "\n";
-        return 1;
+        return false;
     }
     
-    if(bind(server_dsock, (const struct sockaddr*)&name, sizeof(sockaddr_un)) == -1)
+    if(bind(server_dsock, (const struct sockaddr*)&sock_addr, sizeof(sockaddr_un)) == -1)
     {      
         std::cerr << "Ошибка связывания сокета со структурой: errno = " << errno << "\n"; 
         perror("bind");
-        exit(1);
+        return false;
     }
     if(listen(server_dsock, 5) == -1)
     {
-        std::cerr <<"Не удалось включить режим прослушивания соединений:" <<std::endl;
         perror("listen");
-        return 1;
+        return false;
     }
     std::cout<<"Сервер запущен и ожидает подключений..."<<std::endl;
+    return true;
+}
 
+void Server::Process()
+{
     //в случае пустой очереди поток заблокирется в ожидании соединений
-    //data_dsock = accept(server_dsock, NULL, NULL);
     data_dsock = accept(server_dsock, NULL, NULL);
     while(true)
     {
@@ -63,10 +51,9 @@ int main(int argc, char* argv[])
             continue;
         }
        //блокирует поток до нового send
-        count_byte_get = recv(data_dsock, &buffer, 3, 0);//3 сделать надо?
+        count_byte_get = recv(data_dsock, &buffer, SIZE_BUFFER, 0);
         if (count_byte_get < 1){
             if (count_byte_get == 0) {
-                // Соединение было закрыто на другом конце
                 std::cerr << "Соединение закрыто на другом конце\n";
             } else 
                 perror("recv");
@@ -88,3 +75,9 @@ int main(int argc, char* argv[])
     close(data_dsock);
     close(server_dsock);
 }
+
+
+
+
+
+
