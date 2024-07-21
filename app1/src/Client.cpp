@@ -46,6 +46,7 @@ void Client::CountingSort(std::string& input)
     }
 }
 
+
 void Client::WriteThread()
 {
     while(true)
@@ -61,14 +62,15 @@ void Client::WriteThread()
         /* можно воспользоваться стандартным решением std::sort(input.rbegin(), input.rend());
         но оптимальнее будет использовать "Сортировку подсчетом" */
         CountingSort(input);
-
-        for (auto iter = input.begin(); iter != input.end(); ++iter)
+       
+        for (int i = 0; i< input.size(); ++i)
         {
-            int num = ((int)*iter - '0');
+            int num = ((int)input[i] - '0');
             if (num % 2 == 0)
             {
-                *iter = 'B';
-                input.insert(iter++,'K');
+                input[i] = 'B';
+                input.insert(i++, "K");
+                
             } 
         }
         buffer.write(input);
