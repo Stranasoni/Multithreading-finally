@@ -17,5 +17,6 @@ std::string Buffer::read()
     std::unique_lock<std::mutex> lock_buffer(mtx);
     cv.wait(lock_buffer,[this]{return flag;});
     flag = false;
+    cv.notify_one();
     return buffer;
 }
